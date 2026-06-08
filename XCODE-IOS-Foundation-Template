@@ -1,0 +1,187 @@
+# iOS Foundation Template
+
+This document defines the standard project shape to reuse when building future native iOS apps from the LoadPilot baseline.
+
+## Goal
+
+Use this structure when you want:
+- a thin SwiftUI app target
+- business logic isolated from Xcode target noise
+- repeatable local builds with fewer dependency and signing regressions
+- unit-testable app logic before UI iteration
+
+## Foundation Principles
+
+1. Keep domain logic outside the app target.
+2. Treat Xcode target membership as a build-safety boundary.
+3. Prefer Apple-native frameworks before adding third-party dependencies.
+4. Make simulator fallbacks explicit for hardware-dependent features.
+5. Keep the first version local-first unless a backend is required.
+6. Add tests for parsing, workflows, and state transitions before UI polish.
+
+## Standard Repository Shape
+
+```text
+AppName/
+├── AppName.xcodeproj
+├── AppName/
+│   ├── README.md
+│   ├── BUILD_GUARDRAILS.md
+│   ├── BUILD_WORKFLOW_PLAYBOOK.md
+│   ├── IOS_FOUNDATION_TEMPLATE.md
+│   ├── SCAFFOLD_PROMPTS.md
+│   ├── XCODE_DEVICE_TARGETING_CHECKLIST.md
+│   ├── AppleDev/
+│   │   ├── README.md
+│   │   └── APPLE_SIGNING_AND_CONNECT_SETUP.md
+│   ├── Package.swift
+│   ├── Sources/
+│   │   └── AppNameCore/
+│   │       ├── Models/
+│   │       ├── Services/
+│   │       └── ViewModels/
+│   ├── Tests/
+│   │   └── AppNameTests/
+│   ├── iOSApp/
+│   │   ├── App/
+│   │   ├── Views/
+│   │   ├── Services/
+│   │   ├── DesignSystem/
+│   │   └── Assets.xcassets/
+│   └── Assets.xcassets/
+```
+
+## Layer Responsibilities
+
+- `Sources/AppNameCore`
+  - Pure app logic.
+  - Models, services, parsing, state rules, view models.
+  - Should remain usable from tests without Xcode-specific wiring.
+- `Tests/AppNameTests`
+  - Unit tests for core workflows.
+  - Covers parsing, status transitions, duplicate handling, and edge cases.
+- `iOSApp/App`
+  - App entry point and scene setup.
+  - SwiftData container or other app-scope wiring.
+- `iOSApp/Views`
+  - SwiftUI screens and feature composition.
+  - Keep business rules out of views.
+- `iOSApp/Services`
+  - Platform adapters such as camera, scanner, notifications, or permissions.
+- `iOSApp/DesignSystem`
+  - Theme tokens, reusable modifiers, and presentation constants.
+
+## Target Boundary Rules
+
+These rules matter more than folder names.
+
+- App target includes:
+  - `iOSApp/**`
+  - required shared app models used by runtime persistence
+  - linked package product such as `AppNameCore`
+- App target excludes:
+  - `.build/**`
+  - `Tests/**`
+  - `Package.swift`
+  - duplicate template files at the repo root when real app-layer files exist under `iOSApp/`
+- Test target includes:
+  - `Tests/AppNameTests/**`
+- Swift package target includes:
+  - `Sources/AppNameCore/**`
+
+If these boundaries blur, Xcode starts failing with duplicate outputs, unexpected compile membership, or module confusion.
+
+## Dependency Policy
+
+Default policy for new apps:
+
+- First reach for:
+  - `SwiftUI`
+  - `SwiftData`
+  - `Observation`
+  - `VisionKit`
+  - `AVFoundation`
+  - `StoreKit`
+  - `MapKit`
+  - `CoreLocation`
+- Add third-party packages only when:
+  - Apple frameworks clearly do not cover the use case
+  - the package is maintained
+  - the package solves a concrete problem you cannot reasonably own
+
+Before adding a package:
+1. State why Apple-native options are insufficient.
+2. State the exact feature the dependency owns.
+3. Add it in one isolated step.
+4. Rebuild before continuing feature work.
+
+## First-Build Stability Rules
+
+For new projects, always set these up immediately:
+
+1. One canonical repo path.
+2. One `.xcodeproj` as the active project.
+3. Unique bundle identifier.
+4. Automatic signing enabled with the correct team.
+5. Explicit minimum iOS deployment target supported by the installed Xcode.
+6. App target membership reviewed before first device build.
+7. Hardware features given fallback behavior on simulator.
+8. Unit tests runnable with `swift test` before UI-heavy iteration.
+
+## Hardware Feature Pattern
+
+Any feature that depends on camera, scanner, microphone, GPS, or device-only APIs must support:
+
+- availability check
+- permission handling
+- human-readable status messages
+- simulator or unsupported-device fallback
+- a manual entry or mock path when possible
+
+LoadPilot uses this pattern for scanning:
+- live scanner on supported devices
+- clear status when unavailable
+- mock/manual add flow for simulator and recovery
+
+## Testing Baseline
+
+Every scaffolded app should start with tests for:
+
+- parser correctness
+- duplicate suppression
+- workflow state transitions
+- error handling
+- one end-to-end happy path through the core feature
+
+Do not rely on UI tests as the first line of quality control.
+
+## Recommended Build Order
+
+1. Create package/core models and services.
+2. Add unit tests for the core behavior.
+3. Create app entry and design system.
+4. Wire thin SwiftUI views to core view models.
+5. Add platform services and permission strings.
+6. Run package tests.
+7. Run Xcode build on simulator.
+8. Run Xcode build on device for hardware validation.
+
+## Reuse Checklist
+
+When cloning this foundation for a new app:
+
+1. Rename `LoadPilot` identifiers to the new app name consistently.
+2. Rename `LoadPilotCore` to `AppNameCore`.
+3. Update bundle identifier, display name, and team.
+4. Replace app-specific models, services, and view models.
+5. Keep the folder layout and target-boundary rules unchanged unless there is a clear reason.
+6. Copy the docs and update only product-specific sections.
+
+## What To Avoid
+
+- starting with many dependencies
+- putting business logic directly in `ContentView`
+- mixing test files into the app target
+- using multiple local copies of the same project during active iteration
+- changing deployment targets beyond the installed Xcode toolchain support
+- assuming hardware-only APIs will behave in simulator
