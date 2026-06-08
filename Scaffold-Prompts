@@ -1,0 +1,147 @@
+# Scaffold Prompts
+
+Use these prompts to recreate the LoadPilot-style iOS project structure with fewer dependency and build issues.
+
+## How To Use This File
+
+- Start with the one-shot scaffold prompt.
+- Then run the verification prompt before feature expansion.
+- Use the repair prompts only when the generated output violates the rules.
+
+## One-Shot Scaffold Prompt
+
+```text
+Create a production-minded native iOS app scaffold in Swift using Xcode and Swift Package Manager.
+
+Project requirements:
+- Build a thin SwiftUI app target and a separate Swift package core module named `{{AppName}}Core`.
+- Use this repository shape:
+  - `{{AppName}}.xcodeproj`
+  - `{{AppName}}/README.md`
+  - `{{AppName}}/BUILD_GUARDRAILS.md`
+  - `{{AppName}}/BUILD_WORKFLOW_PLAYBOOK.md`
+  - `{{AppName}}/IOS_FOUNDATION_TEMPLATE.md`
+  - `{{AppName}}/SCAFFOLD_PROMPTS.md`
+  - `{{AppName}}/XCODE_DEVICE_TARGETING_CHECKLIST.md`
+  - `{{AppName}}/AppleDev/README.md`
+  - `{{AppName}}/AppleDev/APPLE_SIGNING_AND_CONNECT_SETUP.md`
+  - `{{AppName}}/Package.swift`
+  - `{{AppName}}/Sources/{{AppName}}Core/Models`
+  - `{{AppName}}/Sources/{{AppName}}Core/Services`
+  - `{{AppName}}/Sources/{{AppName}}Core/ViewModels`
+  - `{{AppName}}/Tests/{{AppName}}Tests`
+  - `{{AppName}}/iOSApp/App`
+  - `{{AppName}}/iOSApp/Views`
+  - `{{AppName}}/iOSApp/Services`
+  - `{{AppName}}/iOSApp/DesignSystem`
+  - `{{AppName}}/iOSApp/Assets.xcassets`
+- Keep business logic out of views.
+- Keep app target membership strict:
+  - include `iOSApp/**`
+  - link `{{AppName}}Core`
+  - exclude `.build/**`, `Tests/**`, and `Package.swift`
+- Prefer Apple-native frameworks first. Do not add third-party dependencies unless explicitly justified.
+- Use SwiftData only if the product needs local persistence; otherwise leave persistence injectable.
+- Add simulator-safe fallbacks for hardware features.
+- Add unit tests for parsing, workflow state transitions, duplicate suppression, and one happy-path flow.
+- Add concise documentation for build guardrails, workflow, device targeting, and Apple signing.
+
+Implementation requirements:
+- Create a minimal but real design system file with color tokens and reusable card styling.
+- Create an app entry point under `iOSApp/App`.
+- Create at least one root feature view under `iOSApp/Views`.
+- Create sample models, services, and view models under `Sources/{{AppName}}Core`.
+- Make the scaffold compile cleanly without placeholder imports that break builds.
+- Do not create duplicate root `ContentView.swift` or `App.swift` files outside `iOSApp/` if the real files already exist inside `iOSApp/`.
+- Keep comments short and useful.
+
+Output requirements:
+- Show the full folder tree first.
+- Then generate the files.
+- Then list target-membership rules for Xcode.
+- Then list the commands to validate the scaffold:
+  - `swift test`
+  - Xcode simulator build
+  - Xcode device build
+```
+
+## Verification Prompt
+
+Run this immediately after scaffold generation.
+
+```text
+Audit this iOS scaffold against the following non-negotiable rules and fix every violation:
+
+1. The app target must be thin and should not own business logic.
+2. All domain logic must live under `Sources/{{AppName}}Core`.
+3. `Tests/**`, `.build/**`, and `Package.swift` must not be in the app target.
+4. There must be no duplicate app entry or duplicate `ContentView` files competing across root and `iOSApp/`.
+5. The project must prefer Apple-native frameworks and avoid unnecessary dependencies.
+6. Hardware-dependent features must expose unsupported/simulator fallback behavior.
+7. The generated docs must describe canonical path discipline, target membership discipline, and first-build checks.
+8. The code must be able to pass `swift test` once placed in a normal Xcode/SPM environment.
+
+Return:
+- every violation found
+- the exact fix applied
+- any remaining manual Xcode steps
+```
+
+## Dependency-Control Prompt
+
+Use this before adding packages.
+
+```text
+Before adding any external dependency to this iOS app, compare the requirement against Apple-native frameworks first. Only recommend a package if native APIs are clearly insufficient. If a package is necessary, explain:
+- why native APIs are not enough
+- the exact feature the package owns
+- the package boundary
+- the validation steps after adding it
+
+Do not add convenience dependencies for problems we can own directly in Swift.
+```
+
+## Xcode Membership Repair Prompt
+
+Use this when Xcode starts producing duplicate output or module confusion.
+
+```text
+Inspect this project for Xcode target membership mistakes. Focus on:
+- `Package.swift` accidentally included in the app target
+- test files included in app compile sources
+- duplicate `App.swift` or `ContentView.swift`
+- generated `.build` artifacts referenced by Xcode
+- asset duplication between placeholder and real app folders
+
+Return the exact files that belong in:
+- app target
+- package target
+- test target
+
+Then propose the smallest set of fixes needed to restore clean builds.
+```
+
+## Product-Specific Extension Prompt
+
+Use this after the scaffold is stable.
+
+```text
+Extend this iOS scaffold for the following product without breaking the foundation rules:
+
+Product:
+{{describe the app in 3 to 6 sentences}}
+
+Constraints:
+- preserve the existing repository structure
+- keep the app target thin
+- put new business rules in `{{AppName}}Core`
+- keep dependencies minimal
+- add tests before feature-specific UI polish
+- document any new permissions, entitlements, or device-only constraints
+
+Return:
+- updated folder tree
+- new core models/services/view models
+- new tests
+- any required Xcode capability or Info.plist additions
+```
